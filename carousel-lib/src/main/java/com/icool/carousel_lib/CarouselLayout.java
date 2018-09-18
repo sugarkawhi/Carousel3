@@ -1,35 +1,36 @@
 package com.icool.carousel_lib;
 
 import android.content.Context;
-import android.graphics.Canvas;
-import android.graphics.Color;
+import android.content.res.TypedArray;
+import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.ViewGroup;
-import android.webkit.WebView;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Scroller;
-import android.widget.TextView;
 
 /**
  * @author zhzy
  * created on 2018/9/17.
  */
 public class CarouselLayout extends ViewGroup {
+    private static final String TAG = "CarouselLayout";
 
     //边距
-    private int mGapSpacing = 30;
-    //高度
-    private int mHeight;
-    //宽度
-    private int mWidth;
-
+    private int mGapSpacing;
+    //角度e
+    private float mAngle;
+    //速度
+    private int mSpeed;
+    //滚动辅助类
     private Scroller mScroller;
 
-    private RecyclerView mContainer1;
-    private RecyclerView mContainer2;
-    private RecyclerView mContainer3;
+    private LinearLayout mContainer;
+    private RecyclerView mRv1;
+    private RecyclerView mRv2;
+    private RecyclerView mRv3;
+    private int mDiagonalLine;
 
 
     public CarouselLayout(Context context) {
@@ -42,62 +43,139 @@ public class CarouselLayout extends ViewGroup {
 
     public CarouselLayout(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
+        TypedArray array = context.obtainStyledAttributes(attrs, R.styleable.CarouselLayout);
+        mGapSpacing = array.getDimensionPixelSize(R.styleable.CarouselLayout_carousel_spacing, 20);
+        mAngle = array.getFloat(R.styleable.CarouselLayout_carousel_angle, -30);
+        mSpeed = array.getInt(R.styleable.CarouselLayout_carousel_speed, 1);
+        array.recycle();
         mScroller = new Scroller(getContext());
-        mContainer1 = new RecyclerView(context);
-        mContainer1.setBackgroundColor(Color.RED);
-        TextView t1 = new TextView(getContext());
-        t1.setText("TEXT - 1");
-        mContainer1.addView(t1);
-        mContainer2 = new RecyclerView(context);
-        mContainer2.setBackgroundColor(Color.GREEN);
-        TextView t2 = new TextView(getContext());
-        t2.setText("TEXT -2");
-        mContainer2.addView(t2);
-        mContainer3 = new RecyclerView(context);
-        mContainer3.setBackgroundColor(Color.BLUE);
-        TextView t3 = new TextView(getContext());
-        t3.setText("TEXT -2");
-        mContainer3.addView(t3);
-        addView(mContainer1);
-        addView(mContainer2);
-        addView(mContainer3);
+        init();
     }
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        int width = MeasureSpec.getSize(widthMeasureSpec);
+        int height = MeasureSpec.getSize(heightMeasureSpec);
         measureChildren(widthMeasureSpec, heightMeasureSpec);
-        mWidth = MeasureSpec.getSize(widthMeasureSpec);
-        mHeight = MeasureSpec.getSize(heightMeasureSpec);
-        setMeasuredDimension(mWidth, mHeight);
+        setMeasuredDimension(width, height);
+        mDiagonalLine = (int) Math.sqrt(getMeasuredWidth() * getMeasuredWidth() + getMeasuredHeight() * getMeasuredHeight());
+        ViewGroup.LayoutParams params = mContainer.getLayoutParams();
+        params.width = mDiagonalLine;
+        params.height = mDiagonalLine;
+        mContainer.setLayoutParams(params);
     }
 
     @Override
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
-
-        int sHeight = (mHeight - mGapSpacing * 2) / 3;
-
-        mContainer1.layout(0, 0, mWidth, sHeight);
-        mContainer2.layout(0, sHeight + mGapSpacing, mWidth, sHeight * 2 + mGapSpacing);
-        mContainer3.layout(0, (sHeight + mGapSpacing) * 2, mWidth, mHeight);
-
+        int left = -(mDiagonalLine - getMeasuredWidth()) / 2;
+        int top = -(mDiagonalLine - getMeasuredHeight()) / 2;
+        int right = left + mDiagonalLine;
+        int bottom = top + mDiagonalLine;
+        mContainer.layout(left, top, right, bottom);
     }
+
 
     @Override
     public void computeScroll() {
         super.computeScroll();
-        mContainer1.scrollBy(3, 0);
-        mContainer2.scrollBy(-3, 0);
-        mContainer3.scrollBy(3, 0);
+        mRv1.scrollBy(mSpeed, 0);
+        mRv2.scrollBy(-mSpeed, 0);
+        mRv3.scrollBy(mSpeed, 0);
+        if (mScroller.isFinished()) {
+            Log.i(TAG, "Scroller finished");
+            start();
+        }
+        invalidate();
     }
+
+    public void init() {
+        mContainer = new LinearLayout(getContext());
+        mContainer.setOrientation(LinearLayout.VERTICAL);
+        addView(mContainer, generateDefaultLayoutParams());
+        mRv1 = new CarouselRecyclerView(getContext());
+        mRv2 = new CarouselRecyclerView(getContext());
+        mRv3 = new CarouselRecyclerView(getContext());
+        mContainer.addView(mRv1);
+        mContainer.addView(mRv2);
+        mContainer.addView(mRv3);
+        setSpacing();
+
+
+        mRv1.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
+        mRv2.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, true));
+        mRv3.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
+
+        mContainer.setRotation(mAngle);
+    }
+
+    private void setSpacing() {
+        LinearLayout.LayoutParams lp1 = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 0, 1);
+        lp1.topMargin = mGapSpacing;
+        mRv1.setLayoutParams(lp1);
+
+        LinearLayout.LayoutParams lp2 = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 0, 1);
+        lp2.topMargin = mGapSpacing;
+        mRv2.setLayoutParams(lp2);
+
+        LinearLayout.LayoutParams lp3 = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 0, 1);
+        lp3.topMargin = mGapSpacing;
+        lp3.bottomMargin = mGapSpacing;
+        mRv3.setLayoutParams(lp3);
+    }
+
 
     public void setAdapter(RecyclerView.Adapter adapter1, RecyclerView.Adapter adapter2, RecyclerView.Adapter adapter3) {
-        mContainer1.setAdapter(adapter1);
-        mContainer1.setAdapter(adapter2);
-        mContainer1.setAdapter(adapter3);
+        mRv1.setAdapter(adapter1);
+        mRv2.setAdapter(adapter2);
+        mRv3.setAdapter(adapter3);
     }
 
-    public void startTransfer() {
-        mScroller.startScroll(0, 0, 1000, 1000, 30000);
+    /**
+     * start
+     */
+    public void start() {
+        mScroller.startScroll(0, 0, 100, 100, 1000);
+    }
+
+    /**
+     * pause move
+     */
+    public void pause() {
+        mScroller.forceFinished(true);
+    }
+
+    /**
+     * move speed
+     * recommend 1~3
+     * the bigger the fast
+     *
+     * @param speed speed
+     */
+    public void setSpeed(int speed) {
+        mSpeed = speed;
+    }
+
+    /**
+     * set gap spacing
+     * recommend this value equals recyclerView's item space
+     *
+     * @param spacing space
+     */
+    public void setGapSpacing(int spacing) {
+        mGapSpacing = spacing;
+        setSpacing();
+        requestLayout();
+    }
+
+    /**
+     * set angel
+     * recommend -20~-50
+     *
+     * @param angle angel
+     */
+    public void setAngle(int angle) {
+        mAngle = angle;
+        mContainer.setRotation(mAngle);
     }
 
 }
