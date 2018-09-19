@@ -86,20 +86,5 @@ public class Carousel3Activity extends AppCompatActivity {
             }
         });
 
-        findViewById(R.id.btn_pause)
-                .setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        carouselLayout.pause();
-                    }
-                });
-
-        findViewById(R.id.btn_start)
-                .setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        carouselLayout.start();
-                    }
-                });
     }
 }

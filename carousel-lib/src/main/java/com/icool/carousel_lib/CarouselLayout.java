@@ -138,13 +138,6 @@ public class CarouselLayout extends ViewGroup {
     }
 
     /**
-     * pause move
-     */
-    public void pause() {
-        mScroller.forceFinished(true);
-    }
-
-    /**
      * move speed
      * recommend 1~3
      * the bigger the fast
